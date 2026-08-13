@@ -22,6 +22,11 @@ local fullbrightEnabled = false
 local espEnabled = false
 local savedCFrame = nil
 
+-- Lock Speed Variables
+local lockedSpeed = 16
+local speedLockEnabled = false
+local speedConnection = nil
+
 local defaultLighting = {
     Brightness = Lighting.Brightness,
     ClockTime = Lighting.ClockTime,
@@ -219,8 +224,8 @@ local function createButton(text, color, order, callback)
     return btn
 end
 
--- Function Input Box Speed
-local function createInputSpeed(order, callback)
+-- Function Input Box Speed dengan Fitur LOCKED LOOP
+local function createInputSpeed(order)
     local boxFrame = Instance.new("Frame")
     boxFrame.Size = UDim2.new(1, -8, 0, 36)
     boxFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
@@ -241,7 +246,7 @@ local function createInputSpeed(order, callback)
     title.TextColor3 = Color3.fromRGB(220, 220, 245)
     title.Font = Enum.Font.GothamMedium
     title.TextSize = 11
-    title.Text = "WalkSpeed:"
+    title.Text = "Lock Speed:"
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = boxFrame
 
@@ -258,15 +263,32 @@ local function createInputSpeed(order, callback)
     textBox.Parent = boxFrame
     Instance.new("UICorner", textBox).CornerRadius = UDim.new(0, 6)
 
+    local function applySpeedLock()
+        if speedConnection then speedConnection:Disconnect() end
+        speedConnection = RunService.Stepped:Connect(function()
+            if speedLockEnabled and LocalPlayer.Character then
+                local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.WalkSpeed ~= lockedSpeed then
+                    hum.WalkSpeed = lockedSpeed
+                end
+            end
+        end)
+    end
+
     textBox.FocusLost:Connect(function()
         local num = tonumber(textBox.Text)
-        if num then
-            num = math.clamp(num, 0, 1000)
-            textBox.Text = tostring(num)
-            callback(num)
+        if num and num > 16 then
+            lockedSpeed = math.clamp(num, 0, 1000)
+            speedLockEnabled = true
+            applySpeedLock()
         else
+            lockedSpeed = 16
+            speedLockEnabled = false
+            if speedConnection then speedConnection:Disconnect() end
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+            end
             textBox.Text = "16"
-            callback(16)
         end
     end)
 end
@@ -306,52 +328,70 @@ local function lowServerHop()
     end
 end
 
--- Function ESP Head & Username
-local function createHeadESP(plr)
+-- Sistem ESP Baru (Highlight Head + Billboard Name)
+local function applyESP(plr)
     if plr == LocalPlayer then return end
-    
-    local function applyESP(char)
-        local head = char:WaitForChild("Head", 5)
+
+    local function setupChar(char)
+        if not espEnabled then return end
+        
+        local head = char:WaitForChild("Head", 10)
         if not head then return end
 
-        if head:FindFirstChild("BunHubHeadESP") then head.BunHubHeadESP:Destroy() end
+        -- Hapus ESP lama jika ada
+        if char:FindFirstChild("BunHubHighlight") then char.BunHubHighlight:Destroy() end
+        if head:FindFirstChild("BunHubNameESP") then head.BunHubNameESP:Destroy() end
 
-        local box = Instance.new("SelectionBox")
-        box.Name = "BunHubHeadESP"
-        box.Adornee = head
-        box.Color3 = Color3.fromRGB(255, 50, 50)
-        box.LineThickness = 0.05
-        box.AlwaysOnTop = true
-        box.Parent = head
+        -- Highlight merah menyala untuk Kepala
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "BunHubHighlight"
+        highlight.Adornee = head
+        highlight.FillColor = Color3.fromRGB(255, 0, 50)
+        highlight.FillTransparency = 0.3
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.OutlineTransparency = 0
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Parent = char
 
+        -- Username Tag diatas Kepala
         local bgui = Instance.new("BillboardGui")
         bgui.Name = "BunHubNameESP"
         bgui.Adornee = head
-        bgui.Size = UDim2.new(0, 100, 0, 30)
-        bgui.StudsOffset = Vector3.new(0, 2, 0)
+        bgui.Size = UDim2.new(0, 150, 0, 30)
+        bgui.StudsOffset = Vector3.new(0, 2.2, 0)
         bgui.AlwaysOnTop = true
         bgui.Parent = head
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1, 0, 1, 0)
         label.BackgroundTransparency = 1
-        label.Text = plr.DisplayName .. " (@" .. plr.Name .. ")"
+        label.Text = plr.DisplayName .. "\n(@" .. plr.Name .. ")"
         label.TextColor3 = Color3.fromRGB(255, 255, 255)
         label.Font = Enum.Font.GothamBold
-        label.TextSize = 11
-        label.TextStrokeTransparency = 0.2
+        label.TextSize = 10
+        label.TextStrokeTransparency = 0
+        label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
         label.Parent = bgui
     end
 
-    if plr.Character then applyESP(plr.Character) end
-    plr.CharacterAdded:Connect(applyESP)
+    if plr.Character then setupChar(plr.Character) end
+    plr.CharacterAdded:Connect(setupChar)
 end
 
-local function removeESP()
+local function toggleESP(state)
+    espEnabled = state
     for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.Character and plr.Character:FindFirstChild("Head") then
-            if plr.Character.Head:FindFirstChild("BunHubHeadESP") then plr.Character.Head.BunHubHeadESP:Destroy() end
-            if plr.Character.Head:FindFirstChild("BunHubNameESP") then plr.Character.Head.BunHubNameESP:Destroy() end
+        if plr ~= LocalPlayer then
+            if state then
+                applyESP(plr)
+            else
+                if plr.Character then
+                    if plr.Character:FindFirstChild("BunHubHighlight") then plr.Character.BunHubHighlight:Destroy() end
+                    if plr.Character:FindFirstChild("Head") and plr.Character.Head:FindFirstChild("BunHubNameESP") then
+                        plr.Character.Head.BunHubNameESP:Destroy()
+                    end
+                end
+            end
         end
     end
 end
@@ -371,13 +411,8 @@ createButton("Unragdoll (Up)", Color3.fromRGB(40, 140, 90), 3, function()
     if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Destroy", 2.5) end) end
 end)
 
--- 2. WalkSpeed Input Box
-createInputSpeed(4, function(value)
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChildOfClass("Humanoid") then
-        char:FindFirstChildOfClass("Humanoid").WalkSpeed = value
-    end
-end)
+-- 2. WalkSpeed Input Box (Locked)
+createInputSpeed(4)
 
 -- 3. Movement & Utility Hacks
 createButton("Inf Jump: OFF", Color3.fromRGB(35, 38, 50), 5, function(btn)
@@ -432,19 +467,13 @@ end)
 
 createButton("ESP Head & Name: OFF", Color3.fromRGB(35, 38, 50), 8, function(btn)
     espEnabled = not espEnabled
-    if espEnabled then
-        btn.Text = "ESP Head & Name: ON"
-        btn.BackgroundColor3 = Color3.fromRGB(60, 110, 220)
-        for _, p in ipairs(Players:GetPlayers()) do createHeadESP(p) end
-    else
-        btn.Text = "ESP Head & Name: OFF"
-        btn.BackgroundColor3 = Color3.fromRGB(35, 38, 50)
-        removeESP()
-    end
+    btn.Text = espEnabled and "ESP Head & Name: ON" or "ESP Head & Name: OFF"
+    btn.BackgroundColor3 = espEnabled and Color3.fromRGB(60, 110, 220) or Color3.fromRGB(35, 38, 50)
+    toggleESP(espEnabled)
 end)
 
-Players.PlayerAdded:Connect(function(p)
-    if espEnabled then createHeadESP(p) end
+Players.PlayerAdded:Connect(function(plr)
+    if espEnabled then applyESP(plr) end
 end)
 
 createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 9, function()
