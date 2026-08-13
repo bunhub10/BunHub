@@ -43,6 +43,33 @@ ScreenGui.Name = "BunHubMenu"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
+local SplashText = Instance.new("TextLabel")
+SplashText.Size = UDim2.new(0, 300, 0, 60)
+SplashText.Position = UDim2.new(0.5, -150, 0.4, -30)
+SplashText.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+SplashText.TextColor3 = Color3.fromRGB(255, 255, 255)
+SplashText.Font = Enum.Font.GothamBold
+SplashText.TextSize = 18
+SplashText.Text = "NGESKRIP MULU 🐷"
+SplashText.BorderSizePixel = 0
+SplashText.ZIndex = 10
+SplashText.Parent = ScreenGui
+
+Instance.new("UICorner", SplashText).CornerRadius = UDim.new(0, 12)
+local SplashStroke = Instance.new("UIStroke")
+SplashStroke.Color = Color3.fromRGB(110, 95, 230)
+SplashStroke.Thickness = 2
+SplashStroke.Parent = SplashText
+
+task.spawn(function()
+    task.wait(2)
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(SplashText, tweenInfo, {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+    TweenService:Create(SplashStroke, tweenInfo, {Transparency = 1}):Play()
+    task.wait(0.5)
+    SplashText:Destroy()
+end)
+
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 230, 0, 360)
 MainFrame.Position = UDim2.new(0.05, 0, 0.15, 0)
