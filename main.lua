@@ -91,7 +91,7 @@ OpenBtn.MouseButton1Click:Connect(function()
     OpenBtn.Visible = false
 end)
 
-local RagdollEvent = ReplicatedStorage:WaitForChild("Library"):WaitForChild("Modules"):WaitForChild("Ragdoll"):WaitForChild("Ragdoll")
+local RagdollEvent = ReplicatedStorage:WaitForChild("Library", 5) and ReplicatedStorage.Library:WaitForChild("Modules", 5) and ReplicatedStorage.Library.Modules:WaitForChild("Ragdoll", 5) and ReplicatedStorage.Library.Modules.Ragdoll:WaitForChild("Ragdoll", 5)
 
 local function createButton(text, posY, color, callback)
     local btn = Instance.new("TextButton")
@@ -111,46 +111,22 @@ local function createButton(text, posY, color, callback)
     return btn
 end
 
-local function safeTeleport(targetCFrame)
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not humanoid then return end
-
-    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-    pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(0, 0, 0)) end)
-    
-    task.wait(0.05)
-
-    local startPos = hrp.Position
-    local targetPos = targetCFrame.Position + Vector3.new(0, 10, 0) -- Ketinggian ditambah +10 stud
-    
-    hrp.CFrame = CFrame.new((startPos + targetPos) / 2)
-    hrp.AssemblyLinearVelocity = Vector3.zero
-    
-    task.wait(0.05)
-    
-    char:PivotTo(CFrame.new(targetPos))
-    hrp.AssemblyLinearVelocity = Vector3.zero
-    
-    task.wait(0.1)
-    
-    pcall(function() firesignal(RagdollEvent.OnClientEvent, "Destroy", 2.5) end)
-    humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-end
-
 createButton("Ragdoll Back", 40, Color3.fromRGB(190, 45, 60), function()
-    pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(-7073.3930664062, 854.7236328125, 836.61865234375)) end)
+    if RagdollEvent then
+        pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(-7073.3930664062, 854.7236328125, 836.61865234375)) end)
+    end
 end)
 
 createButton("Ragdoll Front", 80, Color3.fromRGB(210, 95, 35), function()
-    pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(6803.53125, 854.7236328125, -2108.2624511719)) end)
+    if RagdollEvent then
+        pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(6803.53125, 854.7236328125, -2108.2624511719)) end)
+    end
 end)
 
 createButton("Unragdoll (Up)", 120, Color3.fromRGB(40, 150, 90), function()
-    pcall(function() firesignal(RagdollEvent.OnClientEvent, "Destroy", 2.5) end)
+    if RagdollEvent then
+        pcall(function() firesignal(RagdollEvent.OnClientEvent, "Destroy", 2.5) end)
+    end
 end)
 
 createButton("NoClip: OFF", 160, Color3.fromRGB(40, 40, 52), function(btn)
