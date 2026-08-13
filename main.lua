@@ -9,12 +9,10 @@ local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Clean UI Lama
 if PlayerGui:FindFirstChild("BunHubMenu") then
     PlayerGui.BunHubMenu:Destroy()
 end
 
--- Variables & Toggles
 local noClipEnabled = false
 local noClipConnection = nil
 local infJumpEnabled = false
@@ -26,14 +24,12 @@ local defaultLighting = {
     GlobalShadows = Lighting.GlobalShadows
 }
 
--- Anti-AFK Setup
 LocalPlayer.Idled:Connect(function()
     VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
     task.wait(1)
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- Instant ProximityPrompt
 local function makePromptInstant(prompt)
     if prompt:IsA("ProximityPrompt") then
         prompt.HoldDuration = 0
@@ -42,13 +38,11 @@ end
 for _, descendant in ipairs(game:GetDescendants()) do makePromptInstant(descendant) end
 game.DescendantAdded:Connect(makePromptInstant)
 
--- ScreenGui Principal
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BunHubMenu"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
--- Main Frame (Window Utama)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 230, 0, 360)
 MainFrame.Position = UDim2.new(0.05, 0, 0.15, 0)
@@ -64,7 +58,6 @@ MainStroke.Color = Color3.fromRGB(60, 55, 95)
 MainStroke.Thickness = 1.2
 MainStroke.Parent = MainFrame
 
--- Header
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 40)
 Header.BackgroundTransparency = 1
@@ -81,7 +74,6 @@ TitleLabel.TextSize = 14
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.Parent = Header
 
--- Tombol Minimize (-) Mobile Friendly
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
 MinimizeBtn.Position = UDim2.new(1, -36, 0, 6)
@@ -99,7 +91,6 @@ MiniStroke.Color = Color3.fromRGB(50, 50, 70)
 MiniStroke.Thickness = 1
 MiniStroke.Parent = MinimizeBtn
 
--- Line Separator
 local Line = Instance.new("Frame")
 Line.Size = UDim2.new(1, -28, 0, 1)
 Line.Position = UDim2.new(0, 14, 0, 40)
@@ -107,7 +98,6 @@ Line.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 Line.BorderSizePixel = 0
 Line.Parent = MainFrame
 
--- Scroll Frame untuk muat banyak tombol di Layar HP
 local ScrollingFrame = Instance.new("ScrollingFrame")
 ScrollingFrame.Size = UDim2.new(1, -16, 1, -50)
 ScrollingFrame.Position = UDim2.new(0, 8, 0, 45)
@@ -127,7 +117,6 @@ ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- Tombol Floating Buka (Bisa di-drag di Mobile)
 local OpenBtn = Instance.new("TextButton")
 OpenBtn.Size = UDim2.new(0, 48, 0, 48)
 OpenBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
@@ -157,10 +146,8 @@ OpenBtn.MouseButton1Click:Connect(function()
     OpenBtn.Visible = false
 end)
 
--- Ragdoll Event
 local RagdollEvent = ReplicatedStorage:WaitForChild("Library", 3) and ReplicatedStorage.Library:WaitForChild("Modules", 3) and ReplicatedStorage.Library.Modules:WaitForChild("Ragdoll", 3) and ReplicatedStorage.Library.Modules.Ragdoll:WaitForChild("Ragdoll", 3)
 
--- Function Generator Button
 local function createButton(text, color, order, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -8, 0, 32)
@@ -188,9 +175,6 @@ local function createButton(text, color, order, callback)
     return btn
 end
 
--- ================= TOMBOL UTAMA ================= --
-
--- 1. Movement Hacks
 createButton("Speed Boost: 32", Color3.fromRGB(80, 60, 180), 1, function(btn)
     local char = LocalPlayer.Character
     if char and char:FindFirstChildOfClass("Humanoid") then
@@ -231,7 +215,6 @@ createButton("NoClip: OFF", Color3.fromRGB(35, 38, 50), 3, function(btn)
     end
 end)
 
--- 2. Visual / Lighting
 createButton("Fullbright: OFF", Color3.fromRGB(35, 38, 50), 4, function(btn)
     fullbrightEnabled = not fullbrightEnabled
     if fullbrightEnabled then
@@ -251,7 +234,6 @@ createButton("Fullbright: OFF", Color3.fromRGB(35, 38, 50), 4, function(btn)
     end
 end)
 
--- 3. Utility Tools
 createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 5, function()
     local tool = Instance.new("Tool")
     tool.Name = "Click TP"
@@ -269,7 +251,6 @@ createButton("Rejoin Server", Color3.fromRGB(180, 80, 40), 6, function()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
 
--- 4. Game Specific Features (Ragdoll)
 createButton("Ragdoll Back", Color3.fromRGB(180, 50, 65), 7, function()
     if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(-7073.393, 854.723, 836.618)) end) end
 end)
