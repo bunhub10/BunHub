@@ -215,66 +215,54 @@ local function createButton(text, color, order, callback)
     return btn
 end
 
--- Function Generator Slider Speed
-local function createSlider(minVal, maxVal, defaultVal, order, callback)
-    local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(1, -8, 0, 45)
-    sliderFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-    sliderFrame.LayoutOrder = order
-    sliderFrame.Parent = ScrollingFrame
-    Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 8)
+-- Function Input Box Speed (Ketik Angka sampai 1000)
+local function createInputSpeed(order, callback)
+    local boxFrame = Instance.new("Frame")
+    boxFrame.Size = UDim2.new(1, -8, 0, 36)
+    boxFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    boxFrame.LayoutOrder = order
+    boxFrame.Parent = ScrollingFrame
+    Instance.new("UICorner", boxFrame).CornerRadius = UDim.new(0, 8)
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(110, 95, 230)
+    stroke.Thickness = 1
+    stroke.Transparency = 0.5
+    stroke.Parent = boxFrame
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -16, 0, 20)
-    title.Position = UDim2.new(0, 8, 0, 2)
+    title.Size = UDim2.new(0, 100, 1, 0)
+    title.Position = UDim2.new(0, 10, 0, 0)
     title.BackgroundTransparency = 1
     title.TextColor3 = Color3.fromRGB(220, 220, 245)
     title.Font = Enum.Font.GothamMedium
     title.TextSize = 11
-    title.Text = "WalkSpeed: " .. tostring(defaultVal)
+    title.Text = "WalkSpeed:"
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = sliderFrame
+    title.Parent = boxFrame
 
-    local track = Instance.new("Frame")
-    track.Size = UDim2.new(1, -16, 0, 6)
-    track.Position = UDim2.new(0, 8, 0, 28)
-    track.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-    track.BorderSizePixel = 0
-    track.Parent = sliderFrame
-    Instance.new("UICorner", track).CornerRadius = UDim.new(0, 3)
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(0, 80, 0, 24)
+    textBox.Position = UDim2.new(1, -90, 0.5, -12)
+    textBox.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+    textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textBox.Font = Enum.Font.GothamBold
+    textBox.TextSize = 12
+    textBox.Text = "16"
+    textBox.PlaceholderText = "16 - 1000"
+    textBox.ClearTextOnFocus = false
+    textBox.Parent = boxFrame
+    Instance.new("UICorner", textBox).CornerRadius = UDim.new(0, 6)
 
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(110, 95, 230)
-    fill.BorderSizePixel = 0
-    fill.Parent = track
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
-
-    local dragging = false
-    local function update(input)
-        local pos = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
-        local value = math.floor(minVal + (maxVal - minVal) * pos)
-        fill.Size = UDim2.new(pos, 0, 1, 0)
-        title.Text = "WalkSpeed: " .. tostring(value)
-        callback(value)
-    end
-
-    sliderFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            update(input)
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            update(input)
+    textBox.FocusLost:Connect(function()
+        local num = tonumber(textBox.Text)
+        if num then
+            num = math.clamp(num, 0, 1000)
+            textBox.Text = tostring(num)
+            callback(num)
+        else
+            textBox.Text = "16"
+            callback(16)
         end
     end)
 end
@@ -294,8 +282,8 @@ createButton("Unragdoll (Up)", Color3.fromRGB(40, 140, 90), 3, function()
     if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Destroy", 2.5) end) end
 end)
 
--- 2. WalkSpeed Slider
-createSlider(16, 200, 16, 4, function(value)
+-- 2. WalkSpeed Input Box (Max 1000)
+createInputSpeed(4, function(value)
     local char = LocalPlayer.Character
     if char and char:FindFirstChildOfClass("Humanoid") then
         char:FindFirstChildOfClass("Humanoid").WalkSpeed = value
