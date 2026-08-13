@@ -19,6 +19,9 @@ local noClipEnabled = false
 local noClipConnection = nil
 local infJumpEnabled = false
 local fullbrightEnabled = false
+local espEnabled = false
+local savedCFrame = nil
+
 local defaultLighting = {
     Brightness = Lighting.Brightness,
     ClockTime = Lighting.ClockTime,
@@ -303,6 +306,56 @@ local function lowServerHop()
     end
 end
 
+-- Function ESP Head & Username
+local function createHeadESP(plr)
+    if plr == LocalPlayer then return end
+    
+    local function applyESP(char)
+        local head = char:WaitForChild("Head", 5)
+        if not head then return end
+
+        if head:FindFirstChild("BunHubHeadESP") then head.BunHubHeadESP:Destroy() end
+
+        local box = Instance.new("SelectionBox")
+        box.Name = "BunHubHeadESP"
+        box.Adornee = head
+        box.Color3 = Color3.fromRGB(255, 50, 50)
+        box.LineThickness = 0.05
+        box.AlwaysOnTop = true
+        box.Parent = head
+
+        local bgui = Instance.new("BillboardGui")
+        bgui.Name = "BunHubNameESP"
+        bgui.Adornee = head
+        bgui.Size = UDim2.new(0, 100, 0, 30)
+        bgui.StudsOffset = Vector3.new(0, 2, 0)
+        bgui.AlwaysOnTop = true
+        bgui.Parent = head
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = plr.DisplayName .. " (@" .. plr.Name .. ")"
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 11
+        label.TextStrokeTransparency = 0.2
+        label.Parent = bgui
+    end
+
+    if plr.Character then applyESP(plr.Character) end
+    plr.CharacterAdded:Connect(applyESP)
+end
+
+local function removeESP()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Character and plr.Character:FindFirstChild("Head") then
+            if plr.Character.Head:FindFirstChild("BunHubHeadESP") then plr.Character.Head.BunHubHeadESP:Destroy() end
+            if plr.Character.Head:FindFirstChild("BunHubNameESP") then plr.Character.Head.BunHubNameESP:Destroy() end
+        end
+    end
+end
+
 -- ================= DAFTAR FITUR ================= --
 
 -- 1. Ragdoll Actions
@@ -377,7 +430,24 @@ createButton("Fullbright: OFF", Color3.fromRGB(35, 38, 50), 7, function(btn)
     end
 end)
 
-createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 8, function()
+createButton("ESP Head & Name: OFF", Color3.fromRGB(35, 38, 50), 8, function(btn)
+    espEnabled = not espEnabled
+    if espEnabled then
+        btn.Text = "ESP Head & Name: ON"
+        btn.BackgroundColor3 = Color3.fromRGB(60, 110, 220)
+        for _, p in ipairs(Players:GetPlayers()) do createHeadESP(p) end
+    else
+        btn.Text = "ESP Head & Name: OFF"
+        btn.BackgroundColor3 = Color3.fromRGB(35, 38, 50)
+        removeESP()
+    end
+end)
+
+Players.PlayerAdded:Connect(function(p)
+    if espEnabled then createHeadESP(p) end
+end)
+
+createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 9, function()
     local tool = Instance.new("Tool")
     tool.Name = "Click TP"
     tool.RequiresHandle = false
@@ -390,11 +460,31 @@ createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 8, function()
     tool.Parent = LocalPlayer.Backpack
 end)
 
-createButton("Low Server Hop 📉", Color3.fromRGB(110, 60, 180), 9, function(btn)
+createButton("Low Server Hop 📉", Color3.fromRGB(110, 60, 180), 10, function(btn)
     btn.Text = "Searching Server..."
     lowServerHop()
 end)
 
-createButton("Rejoin Server 🔄", Color3.fromRGB(180, 80, 40), 10, function()
+createButton("Rejoin Server 🔄", Color3.fromRGB(180, 80, 40), 11, function()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
+
+-- 4. Save Position & TP (DI PALING BAWAH)
+createButton("Save Position 📌", Color3.fromRGB(50, 130, 90), 12, function(btn)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        savedCFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+        btn.Text = "Position Saved! ✅"
+        task.wait(1.5)
+        btn.Text = "Save Position 📌"
+    end
+end)
+
+createButton("TP to Saved Position 🚀", Color3.fromRGB(160, 60, 110), 13, function(btn)
+    if savedCFrame and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = savedCFrame
+    else
+        btn.Text = "No Position Saved!"
+        task.wait(1.5)
+        btn.Text = "TP to Saved Position 🚀"
+    end
 end)
