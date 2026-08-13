@@ -6,6 +6,7 @@ local Lighting = game:GetService("Lighting")
 local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -215,7 +216,7 @@ local function createButton(text, color, order, callback)
     return btn
 end
 
--- Function Input Box Speed (Ketik Angka sampai 1000)
+-- Function Input Box Speed
 local function createInputSpeed(order, callback)
     local boxFrame = Instance.new("Frame")
     boxFrame.Size = UDim2.new(1, -8, 0, 36)
@@ -267,9 +268,44 @@ local function createInputSpeed(order, callback)
     end)
 end
 
+-- Function Low Server Hop
+local function lowServerHop()
+    local placeId = game.PlaceId
+    local servers = {}
+    local req = request or http_request or (syn and syn.request)
+    
+    local function fetchServers(cursor)
+        local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100" .. (cursor and "&cursor=" .. cursor or "")
+        local success, result = pcall(function()
+            if req then
+                return HttpService:JSONDecode(req({Url = url}).Body)
+            else
+                return HttpService:JSONDecode(game:HttpGet(url))
+            end
+        end)
+        return success and result or nil
+    end
+
+    local data = fetchServers()
+    if data and data.data then
+        for _, s in ipairs(data.data) do
+            if s.playing < s.maxPlayers and s.id ~= game.JobId then
+                table.insert(servers, s)
+            end
+        end
+    end
+
+    if #servers > 0 then
+        table.sort(servers, function(a, b) return a.playing < b.playing end)
+        TeleportService:TeleportToPlaceInstance(placeId, servers[1].id, LocalPlayer)
+    else
+        TeleportService:TeleportToPlaceInstance(placeId, game.JobId, LocalPlayer)
+    end
+end
+
 -- ================= DAFTAR FITUR ================= --
 
--- 1. Ragdoll Actions (DI PALING ATAS)
+-- 1. Ragdoll Actions
 createButton("Ragdoll Back", Color3.fromRGB(180, 50, 65), 1, function()
     if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(-7073.393, 854.723, 836.618)) end) end
 end)
@@ -282,7 +318,7 @@ createButton("Unragdoll (Up)", Color3.fromRGB(40, 140, 90), 3, function()
     if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Destroy", 2.5) end) end
 end)
 
--- 2. WalkSpeed Input Box (Max 1000)
+-- 2. WalkSpeed Input Box
 createInputSpeed(4, function(value)
     local char = LocalPlayer.Character
     if char and char:FindFirstChildOfClass("Humanoid") then
@@ -354,6 +390,11 @@ createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 8, function()
     tool.Parent = LocalPlayer.Backpack
 end)
 
-createButton("Rejoin Server", Color3.fromRGB(180, 80, 40), 9, function()
+createButton("Low Server Hop 📉", Color3.fromRGB(110, 60, 180), 9, function(btn)
+    btn.Text = "Searching Server..."
+    lowServerHop()
+end)
+
+createButton("Rejoin Server 🔄", Color3.fromRGB(180, 80, 40), 10, function()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
