@@ -293,42 +293,66 @@ local function createInputSpeed(order)
     end)
 end
 
--- Function Low Server Hop
-local function lowServerHop()
-    local placeId = game.PlaceId
-    local servers = {}
-    local req = request or http_request or (syn and syn.request)
-    
-    local function fetchServers(cursor)
-        local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/0?sortOrder=Asc&limit=100" .. (cursor and "&cursor=" .. cursor or "")
-        local success, result = pcall(function()
-            if req then
-                return HttpService:JSONDecode(req({Url = url}).Body)
-            else
-                return HttpService:JSONDecode(game:HttpGet(url))
-            end
-        end)
-        return success and result or nil
+-- Function Low Server Hop (FIXED METHOD)
+local function lowServerHop(btn)
+    local PlaceId = game.PlaceId
+    local JobId = game.JobId
+    local req = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+
+    if not req then
+        btn.Text = "Exec Not Supported ❌"
+        task.wait(2)
+        btn.Text = "Low Server Hop 📉"
+        return
     end
 
-    local data = fetchServers()
-    if data and data.data then
-        for _, s in ipairs(data.data) do
-            if s.playing < s.maxPlayers and s.id ~= game.JobId then
-                table.insert(servers, s)
+    btn.Text = "Searching Low Server..."
+
+    task.spawn(function()
+        local targetServer = nil
+        local cursor = ""
+        local attempts = 0
+
+        while attempts < 10 do
+            attempts = attempts + 1
+            local url = "https://games.roblox.com/v1/games/" .. PlaceId .. "/servers/Public?sortOrder=Asc&limit=100" .. (cursor ~= "" and "&cursor=" .. cursor or "")
+            
+            local success, response = pcall(function()
+                return req({Url = url, Method = "GET"})
+            end)
+
+            if success and response and response.Body then
+                local body = HttpService:JSONDecode(response.Body)
+                if body and body.data then
+                    for _, server in ipairs(body.data) do
+                        if server.id ~= JobId and server.playing < server.maxPlayers and server.playing > 0 then
+                            targetServer = server.id
+                            break
+                        end
+                    end
+                    if targetServer then break end
+                    if body.nextPageCursor then
+                        cursor = body.nextPageCursor
+                    else
+                        break
+                    end
+                end
             end
+            task.wait(0.2)
         end
-    end
 
-    if #servers > 0 then
-        table.sort(servers, function(a, b) return a.playing < b.playing end)
-        TeleportService:TeleportToPlaceInstance(placeId, servers[1].id, LocalPlayer)
-    else
-        TeleportService:TeleportToPlaceInstance(placeId, game.JobId, LocalPlayer)
-    end
+        if targetServer then
+            btn.Text = "Teleporting... 🚀"
+            TeleportService:TeleportToPlaceInstance(PlaceId, targetServer, LocalPlayer)
+        else
+            btn.Text = "Server Not Found! ❌"
+            task.wait(2)
+            btn.Text = "Low Server Hop 📉"
+        end
+    end)
 end
 
--- Sistem ESP Baru (Highlight Head + Billboard Name)
+-- Sistem ESP (Highlight Head + Billboard Name)
 local function applyESP(plr)
     if plr == LocalPlayer then return end
 
@@ -338,11 +362,9 @@ local function applyESP(plr)
         local head = char:WaitForChild("Head", 10)
         if not head then return end
 
-        -- Hapus ESP lama jika ada
         if char:FindFirstChild("BunHubHighlight") then char.BunHubHighlight:Destroy() end
         if head:FindFirstChild("BunHubNameESP") then head.BunHubNameESP:Destroy() end
 
-        -- Highlight merah menyala untuk Kepala
         local highlight = Instance.new("Highlight")
         highlight.Name = "BunHubHighlight"
         highlight.Adornee = head
@@ -353,7 +375,6 @@ local function applyESP(plr)
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Parent = char
 
-        -- Username Tag diatas Kepala
         local bgui = Instance.new("BillboardGui")
         bgui.Name = "BunHubNameESP"
         bgui.Adornee = head
@@ -490,8 +511,7 @@ createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 9, function()
 end)
 
 createButton("Low Server Hop 📉", Color3.fromRGB(110, 60, 180), 10, function(btn)
-    btn.Text = "Searching Server..."
-    lowServerHop()
+    lowServerHop(btn)
 end)
 
 createButton("Rejoin Server 🔄", Color3.fromRGB(180, 80, 40), 11, function()
