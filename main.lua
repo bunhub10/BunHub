@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -43,35 +44,47 @@ ScreenGui.Name = "BunHubMenu"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
-local SplashText = Instance.new("TextLabel")
-SplashText.Size = UDim2.new(0, 300, 0, 60)
-SplashText.Position = UDim2.new(0.5, -150, 0.4, -30)
-SplashText.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-SplashText.TextColor3 = Color3.fromRGB(255, 255, 255)
-SplashText.Font = Enum.Font.GothamBold
-SplashText.TextSize = 18
-SplashText.Text = "NGESKRIP MULU 🐷"
-SplashText.BorderSizePixel = 0
-SplashText.ZIndex = 10
-SplashText.Parent = ScreenGui
+-- Fullscreen RGB Splash Screen
+local SplashOverlay = Instance.new("Frame")
+SplashOverlay.Size = UDim2.new(1, 0, 1, 0)
+SplashOverlay.Position = UDim2.new(0, 0, 0, 0)
+SplashOverlay.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+SplashOverlay.BackgroundTransparency = 0.15
+SplashOverlay.BorderSizePixel = 0
+SplashOverlay.ZIndex = 999
+SplashOverlay.Parent = ScreenGui
 
-Instance.new("UICorner", SplashText).CornerRadius = UDim.new(0, 12)
-local SplashStroke = Instance.new("UIStroke")
-SplashStroke.Color = Color3.fromRGB(110, 95, 230)
-SplashStroke.Thickness = 2
-SplashStroke.Parent = SplashText
+local SplashText = Instance.new("TextLabel")
+SplashText.Size = UDim2.new(1, 0, 1, 0)
+SplashText.Position = UDim2.new(0, 0, 0, 0)
+SplashText.BackgroundTransparency = 1
+SplashText.TextColor3 = Color3.fromRGB(255, 0, 0)
+SplashText.Font = Enum.Font.GothamBold
+SplashText.TextSize = 36
+SplashText.Text = "NGESKRIP MULU 🐷"
+SplashText.ZIndex = 1000
+SplashText.Parent = SplashOverlay
+
+local rgbConnection
+local hue = 0
+rgbConnection = RunService.RenderStepped:Connect(function(dt)
+    hue = (hue + dt * 0.5) % 1
+    SplashText.TextColor3 = Color3.fromHSV(hue, 0.8, 1)
+end)
 
 task.spawn(function()
     task.wait(2)
+    if rgbConnection then rgbConnection:Disconnect() end
     local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(SplashText, tweenInfo, {TextTransparency = 1, BackgroundTransparency = 1}):Play()
-    TweenService:Create(SplashStroke, tweenInfo, {Transparency = 1}):Play()
+    TweenService:Create(SplashOverlay, tweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(SplashText, tweenInfo, {TextTransparency = 1}):Play()
     task.wait(0.5)
-    SplashText:Destroy()
+    SplashOverlay:Destroy()
 end)
 
+-- Main UI Window
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 230, 0, 360)
+MainFrame.Size = UDim2.new(0, 230, 0, 380)
 MainFrame.Position = UDim2.new(0.05, 0, 0.15, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 MainFrame.BorderSizePixel = 0
@@ -202,28 +215,107 @@ local function createButton(text, color, order, callback)
     return btn
 end
 
-createButton("Speed Boost: 32", Color3.fromRGB(80, 60, 180), 1, function(btn)
+-- Function Generator Slider Speed
+local function createSlider(minVal, maxVal, defaultVal, order, callback)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, -8, 0, 45)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    sliderFrame.LayoutOrder = order
+    sliderFrame.Parent = ScrollingFrame
+    Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 8)
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -16, 0, 20)
+    title.Position = UDim2.new(0, 8, 0, 2)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(220, 220, 245)
+    title.Font = Enum.Font.GothamMedium
+    title.TextSize = 11
+    title.Text = "WalkSpeed: " .. tostring(defaultVal)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = sliderFrame
+
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(1, -16, 0, 6)
+    track.Position = UDim2.new(0, 8, 0, 28)
+    track.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    track.BorderSizePixel = 0
+    track.Parent = sliderFrame
+    Instance.new("UICorner", track).CornerRadius = UDim.new(0, 3)
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(110, 95, 230)
+    fill.BorderSizePixel = 0
+    fill.Parent = track
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
+
+    local dragging = false
+    local function update(input)
+        local pos = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+        local value = math.floor(minVal + (maxVal - minVal) * pos)
+        fill.Size = UDim2.new(pos, 0, 1, 0)
+        title.Text = "WalkSpeed: " .. tostring(value)
+        callback(value)
+    end
+
+    sliderFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            update(input)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input)
+        end
+    end)
+end
+
+-- ================= DAFTAR FITUR ================= --
+
+-- 1. Ragdoll Actions (DI PALING ATAS)
+createButton("Ragdoll Back", Color3.fromRGB(180, 50, 65), 1, function()
+    if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(-7073.393, 854.723, 836.618)) end) end
+end)
+
+createButton("Ragdoll Front", Color3.fromRGB(200, 90, 45), 2, function()
+    if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(6803.531, 854.723, -2108.262)) end) end
+end)
+
+createButton("Unragdoll (Up)", Color3.fromRGB(40, 140, 90), 3, function()
+    if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Destroy", 2.5) end) end
+end)
+
+-- 2. WalkSpeed Slider
+createSlider(16, 200, 16, 4, function(value)
     local char = LocalPlayer.Character
     if char and char:FindFirstChildOfClass("Humanoid") then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        hum.WalkSpeed = (hum.WalkSpeed == 16) and 32 or 16
-        btn.Text = "Speed Boost: " .. tostring(hum.WalkSpeed)
+        char:FindFirstChildOfClass("Humanoid").WalkSpeed = value
     end
 end)
 
-createButton("Inf Jump: OFF", Color3.fromRGB(35, 38, 50), 2, function(btn)
+-- 3. Movement & Utility Hacks
+createButton("Inf Jump: OFF", Color3.fromRGB(35, 38, 50), 5, function(btn)
     infJumpEnabled = not infJumpEnabled
     btn.Text = infJumpEnabled and "Inf Jump: ON" or "Inf Jump: OFF"
     btn.BackgroundColor3 = infJumpEnabled and Color3.fromRGB(60, 110, 220) or Color3.fromRGB(35, 38, 50)
 end)
 
-game:GetService("UserInputService").JumpRequest:Connect(function()
+UserInputService.JumpRequest:Connect(function()
     if infJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
     end
 end)
 
-createButton("NoClip: OFF", Color3.fromRGB(35, 38, 50), 3, function(btn)
+createButton("NoClip: OFF", Color3.fromRGB(35, 38, 50), 6, function(btn)
     noClipEnabled = not noClipEnabled
     if noClipEnabled then
         btn.Text = "NoClip: ON"
@@ -242,7 +334,7 @@ createButton("NoClip: OFF", Color3.fromRGB(35, 38, 50), 3, function(btn)
     end
 end)
 
-createButton("Fullbright: OFF", Color3.fromRGB(35, 38, 50), 4, function(btn)
+createButton("Fullbright: OFF", Color3.fromRGB(35, 38, 50), 7, function(btn)
     fullbrightEnabled = not fullbrightEnabled
     if fullbrightEnabled then
         btn.Text = "Fullbright: ON"
@@ -261,7 +353,7 @@ createButton("Fullbright: OFF", Color3.fromRGB(35, 38, 50), 4, function(btn)
     end
 end)
 
-createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 5, function()
+createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 8, function()
     local tool = Instance.new("Tool")
     tool.Name = "Click TP"
     tool.RequiresHandle = false
@@ -274,18 +366,6 @@ createButton("Get Click TP Tool", Color3.fromRGB(40, 120, 180), 5, function()
     tool.Parent = LocalPlayer.Backpack
 end)
 
-createButton("Rejoin Server", Color3.fromRGB(180, 80, 40), 6, function()
+createButton("Rejoin Server", Color3.fromRGB(180, 80, 40), 9, function()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-end)
-
-createButton("Ragdoll Back", Color3.fromRGB(180, 50, 65), 7, function()
-    if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(-7073.393, 854.723, 836.618)) end) end
-end)
-
-createButton("Ragdoll Front", Color3.fromRGB(200, 90, 45), 8, function()
-    if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Make", 2.5, Vector3.new(6803.531, 854.723, -2108.262)) end) end
-end)
-
-createButton("Unragdoll (Up)", Color3.fromRGB(40, 140, 90), 9, function()
-    if RagdollEvent then pcall(function() firesignal(RagdollEvent.OnClientEvent, "Destroy", 2.5) end) end
 end)
